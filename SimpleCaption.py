@@ -427,11 +427,13 @@ def get_available_templates():
         print(f"Error getting templates: {e}")
         return []
 
+
+
 def main():
     dpg.create_context()
 
     def execute_callback():
-        file_path = os.path.join(dpg.get_value("directory"), dpg.get_value("file_name"))
+        file_path = dpg.get_value("srt_file_path")
         
         # Refresh timeline to ensure we have the current one
         global timeline
@@ -450,16 +452,15 @@ def main():
         else:
             dpg.set_value("status", "Failed to create Text+")
 
-        
-
-
-    def directory_dialog():
+    def srt_file_dialog():
         dpg.add_file_dialog(
-            directory_selector=True, show=False,
-            callback=lambda s, a, u: dpg.set_value("directory", a['file_path_name']),
+            directory_selector=False, show=False,
+            callback=lambda s, a, u: dpg.set_value("srt_file_path", a['file_path_name']),
             height=400,
-            tag="directory_dialog"
+            tag="srt_file_dialog"
         )
+        dpg.add_file_extension(".srt", parent="srt_file_dialog", color=(0, 200, 255, 255))
+        dpg.add_file_extension(".*", parent="srt_file_dialog")
 
     def update_tracks():
         tracks = get_video_tracks()
@@ -482,20 +483,17 @@ def main():
                 dpg.add_combo(items=get_available_templates(), tag="template")
                 dpg.add_button(label="Update", callback=update_templates)
         
-        dpg.add_text("Working Directory")
+        dpg.add_text("SRT File")
         with dpg.group(horizontal=True):
-            dpg.add_input_text(tag="directory", default_value=os.getcwd())
-            dpg.add_button(label="Select Directory", callback=lambda: dpg.show_item("directory_dialog"))
-        
-        dpg.add_text("SRT File Name")
-        dpg.add_input_text(tag="file_name", default_value="subtitle.srt")
+            dpg.add_input_text(tag="srt_file_path", default_value="")
+            dpg.add_button(label="Select SRT File", callback=lambda: dpg.show_item("srt_file_dialog"))
 
         dpg.add_button(label="Execute", callback=execute_callback)
         dpg.add_text("", tag="status")
 
-    directory_dialog()
+    srt_file_dialog()
 
-    dpg.create_viewport(title="Text+2SRT", width=600, height=500, resizable=False)
+    dpg.create_viewport(title="Simple Captions", width=600, height=500, resizable=False)
     dpg.setup_dearpygui()
     dpg.show_viewport()
     print(dpg.set_primary_window("TextPlus2SRT", True))
