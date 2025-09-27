@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 
 import sys, time, subprocess, os
-import pandas as pd
-import dearpygui.dearpygui as dpg
+import tkinter as tk
+from tkinter import ttk, filedialog, messagebox
 from datetime import timedelta
 from typing import List, Dict, Optional, Iterable
 
-# pip install pandas dearpygui
+# pip install pandas
 
 # ---------- Resolve bootstrap (same pattern as original) ----------
 
@@ -50,7 +50,7 @@ timeline = project.GetCurrentTimeline()
 # ------------------------- srt file functions -------------------------
 
 def srt2df(file_path):
-    df = pd.DataFrame(columns=['id', 'start', 'end', 'text'])
+    df = []
 
     with open(file_path, 'r', encoding='utf-8') as file:
         content = file.read()
@@ -79,14 +79,13 @@ def srt2df(file_path):
             endTime_seconds = float(h) * 3600 + float(m) * 60 + float(s)
 
             # Append to dataframe
-            new_index = len(df)
-            df.loc[new_index] = [nid, startTime_seconds, endTime_seconds, text]
+            df.append({'id': nid, 'start': startTime_seconds, 'end': endTime_seconds, 'text': text})
 
     return df
 
 def df2srt(df, file_path):
     with open(file_path, 'w', encoding='utf-8') as file:
-        for index, row in df.iterrows():
+        for row in df:
 
             nid = row['id']
 
@@ -130,7 +129,7 @@ def apply_text_transform(text, transform):
 
 # find a video track with the name marker and extract the text from the Text+ track item to a dataframe
 def timelineText2df(timeline, marker):
-    df = pd.DataFrame(columns=['id', 'start', 'end', 'text'])
+    df = []
     if timeline:
         track_count = timeline.GetTrackCount("video")
         for i in range(1, track_count + 1):
@@ -148,8 +147,7 @@ def timelineText2df(timeline, marker):
                                 text_tool = fusion_comp.FindToolByID("TextPlus")
                                 if text_tool:
                                     text_content = text_tool.GetInput("StyledText")
-                                    new_index = len(df)
-                                    df.loc[new_index] = [nid, start_time, end_time, text_content]
+                                    df.append({'id': nid, 'start': start_time, 'end': end_time, 'text': text_content})
                                     nid += 1
     return df
 
@@ -173,7 +171,7 @@ def df2timelineText(df, timeline, marker):
                                 # print("A")
                                 if text_tool:
                                     # print("B")
-                                    for index, row in df.iterrows():
+                                    for row in df:
                                         if row['id'] == nid:
                                             text_tool.SetInput("StyledText", row['text'])
                                             nid += 1
@@ -184,11 +182,11 @@ def df2NewtimelineText(df, timeline, template_name):
     Create new Text+ clips from SRT dataframe on timeline
     
     Args:
-        df: DataFrame with subtitle data
+        df: list of dicts with subtitle data
         timeline: DaVinci Resolve timeline object
         template_name: Name of the Text+ template to use
     """
-    if not timeline or df.empty:
+    if not timeline or not df:
         print("No timeline or empty dataframe")
         return False
 
@@ -248,7 +246,7 @@ def df2NewtimelineText(df, timeline, template_name):
     # Create Text+ clips for each subtitle
     created_clips = []
     
-    for index, row in df.iterrows():
+    for row in df:
         if row['id'] == 0:  # Skip invalid entries
             continue
             
@@ -378,15 +376,10 @@ except ImportError:
         load_source('DaVinciResolveScript', expectedPath + "DaVinciResolveScript.py")
         import DaVinciResolveScript as dvr_script
     except Exception as ex:
-        dpg.create_context()
-        with dpg.window(label="Error"):
-            dpg.add_text("Unable to find module DaVinciResolveScript. Please ensure that the module is discoverable by Python.")
-            dpg.add_button(label="OK", callback=lambda: dpg.stop_dearpygui())
-        dpg.create_viewport(title="Error", width=400, height=200)
-        dpg.setup_dearpygui()
-        dpg.show_viewport()
-        dpg.start_dearpygui()
-        dpg.destroy_context()
+        root = tk.Tk()
+        root.withdraw()
+        messagebox.showerror("Error", "Unable to find module DaVinciResolveScript. Please ensure that the module is discoverable by Python.")
+        root.destroy()
         sys.exit(1)
 
 resolve = dvr_script.scriptapp("Resolve")
@@ -430,75 +423,68 @@ def get_available_templates():
 
 
 def main():
-    dpg.create_context()
+    root = tk.Tk()
+    root.title("Simple Captions")
+    root.geometry("600x220")
+
+    srt_path_var = tk.StringVar()
+    status_var = tk.StringVar()
+
+    templates = get_available_templates()
+    template_var = tk.StringVar(value=templates[0] if templates else "")
+
+    def select_srt_file():
+        path = filedialog.askopenfilename(title="Select SRT File", filetypes=[("SRT files", "*.srt"), ("All files", "*.*")])
+        if path:
+            srt_path_var.set(path)
+
+    def refresh_templates():
+        items = get_available_templates()
+        combo["values"] = items
+        if items:
+            status_var.set(f"Found {len(items)} templates")
+            template_var.set(items[0])
+        else:
+            status_var.set("No Text+ templates found in Media Pool")
+            template_var.set("")
 
     def execute_callback():
-        file_path = dpg.get_value("srt_file_path")
-        
-        # Refresh timeline to ensure we have the current one
+        file_path = srt_path_var.get()
         global timeline
         timeline = project.GetCurrentTimeline()
-
-        template = dpg.get_value("template")
+        template = template_var.get()
         if not file_path or not template:
-            dpg.set_value("status", "Please provide SRT file path, and template name.")
+            status_var.set("Please provide SRT file path, and template name.")
             return
-        print("Creating...")
-        # try:
         df = srt2df(file_path)
         success = df2NewtimelineText(df, timeline, template)
         if success:
-            dpg.set_value("status", f"Successfully created Text+ with template '{template}'")
+            status_var.set(f"Successfully created Text+ with template '{template}'")
         else:
-            dpg.set_value("status", "Failed to create Text+")
+            status_var.set("Failed to create Text+")
 
-    def srt_file_dialog():
-        dpg.add_file_dialog(
-            directory_selector=False, show=False,
-            callback=lambda s, a, u: dpg.set_value("srt_file_path", a['file_path_name']),
-            height=400,
-            tag="srt_file_dialog"
-        )
-        dpg.add_file_extension(".srt", parent="srt_file_dialog", color=(0, 200, 255, 255))
-        dpg.add_file_extension(".*", parent="srt_file_dialog")
+    content = ttk.Frame(root, padding=16)
+    content.grid(row=0, column=0, sticky="nsew")
+    root.columnconfigure(0, weight=1)
+    root.rowconfigure(0, weight=1)
 
-    def update_tracks():
-        tracks = get_video_tracks()
-        dpg.configure_item("track", items=tracks)
-        dpg.set_value("status", "Tracks updated")
-    
-    def update_templates():
-        templates = get_available_templates()
-        dpg.configure_item("template", items=templates)
-        if templates:
-            dpg.set_value("status", f"Found {len(templates)} templates")
-        else:
-            dpg.set_value("status", "No Text+ templates found in Media Pool")
+    ttk.Label(content, text="Text+ Template").grid(row=0, column=0, sticky="w")
+    combo = ttk.Combobox(content, textvariable=template_var, values=templates, state="readonly")
+    combo.grid(row=0, column=1, sticky="ew", padx=(8, 8))
+    ttk.Button(content, text="Update", command=refresh_templates).grid(row=0, column=2, sticky="w")
 
-    with dpg.window(label="TextPlus2SRT", tag="TextPlus2SRT"):        
-        # Template selection (only shown for Create mode)
-        with dpg.group(tag="template_group", show=True):
-            dpg.add_text("Text+ Template")
-            with dpg.group(horizontal=True):
-                dpg.add_combo(items=get_available_templates(), tag="template")
-                dpg.add_button(label="Update", callback=update_templates)
-        
-        dpg.add_text("SRT File")
-        with dpg.group(horizontal=True):
-            dpg.add_input_text(tag="srt_file_path", default_value="")
-            dpg.add_button(label="Select SRT File", callback=lambda: dpg.show_item("srt_file_dialog"))
+    ttk.Label(content, text="SRT File").grid(row=1, column=0, sticky="w", pady=(12, 0))
+    entry = ttk.Entry(content, textvariable=srt_path_var)
+    entry.grid(row=1, column=1, sticky="ew", padx=(8, 8), pady=(12, 0))
+    ttk.Button(content, text="Select SRT File", command=select_srt_file).grid(row=1, column=2, sticky="w", pady=(12, 0))
 
-        dpg.add_button(label="Execute", callback=execute_callback)
-        dpg.add_text("", tag="status")
+    ttk.Button(content, text="Execute", command=execute_callback).grid(row=2, column=0, columnspan=3, sticky="ew", pady=(16, 0))
+    status_lbl = ttk.Label(content, textvariable=status_var)
+    status_lbl.grid(row=3, column=0, columnspan=3, sticky="w", pady=(12, 0))
 
-    srt_file_dialog()
+    content.columnconfigure(1, weight=1)
 
-    dpg.create_viewport(title="Simple Captions", width=600, height=500, resizable=False)
-    dpg.setup_dearpygui()
-    dpg.show_viewport()
-    print(dpg.set_primary_window("TextPlus2SRT", True))
-    dpg.start_dearpygui()
-    dpg.destroy_context()
+    root.mainloop()
 
 if __name__ == "__main__":
     main()
