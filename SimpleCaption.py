@@ -3,13 +3,16 @@
 import sys
 import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
-import platform
 
-from python_get_resolve import GetResolve
 
 # ------------------------- resolve api connection -------------------------
 
-resolve = GetResolve()
+try:
+    resolve
+except NameError:
+    from python_get_resolve import GetResolve
+    resolve = GetResolve()
+
 project_manager = resolve.GetProjectManager()
 project = project_manager.GetCurrentProject()
 timeline = project.GetCurrentTimeline()
@@ -296,40 +299,6 @@ def list_available_templates(media_pool):
 
     # ------------------------------------------------------------
 
-def load_source(module_name, file_path):
-    if sys.version_info[0] >= 3 and sys.version_info[1] >= 5:
-        import importlib.util
-        module = None
-        spec = importlib.util.spec_from_file_location(module_name, file_path)
-        if spec:
-            module = importlib.util.module_from_spec(spec)
-        if module:
-            sys.modules[module_name] = module
-            spec.loader.exec_module(module)
-        return module
-    else:
-        import imp
-        return imp.load_source(module_name, file_path)
-
-try:
-    import DaVinciResolveScript as dvr_script
-except ImportError:
-    try:
-        expectedPath = "/opt/resolve/Developer/Scripting/Modules/"
-        load_source('DaVinciResolveScript', expectedPath + "DaVinciResolveScript.py")
-        import DaVinciResolveScript as dvr_script
-    except Exception as ex:
-        root = tk.Tk()
-        root.withdraw()
-        messagebox.showerror("Error", "Unable to find module DaVinciResolveScript. Please ensure that the module is discoverable by Python.")
-        root.destroy()
-        sys.exit(1)
-
-resolve = dvr_script.scriptapp("Resolve")
-project_manager = resolve.GetProjectManager()
-project = project_manager.GetCurrentProject()
-timeline = project.GetCurrentTimeline()
-
 def get_video_tracks():
     global timeline
     timeline = project.GetCurrentTimeline()
@@ -344,19 +313,18 @@ def get_available_templates():
         templates = []
         
         def search_folder(folder):
-            clips = folder.GetClipList()
-            for clip in clips:
-                if clip.GetClipProperty("File Path") == "":
-                    clip_name = clip.GetClipProperty("Clip Name")
-                    templates.append(clip_name)
-            
             for subfolder in folder.GetSubFolderList():
-                print("subfolder", subfolder.GetName())
-                if subfolder.GetName() != "Captions Templates":
-                    continue
-                search_folder(subfolder)
+                if subfolder.GetName() == "Captions Templates":
+                    clips = subfolder.GetClipList()
+                    for clip in clips:
+                        if clip.GetClipProperty("File Path") == "":
+                            clip_name = clip.GetClipProperty("Clip Name")
+                            templates.append(clip_name)
         
         search_folder(root_folder)
+
+        templates.sort()
+
         return templates
     except Exception as e:
         print(f"Error getting templates: {e}")
