@@ -1,4 +1,4 @@
-# Davinci OpenCaptions
+# Resolve OpenCaptions
 A Free and Open Source Caption Tool for Davinci Resolve.
 
 ## Description
@@ -46,6 +46,14 @@ This is an open source tool that uses the Davinci API to create text+ caption tr
 - tkinter (standard library)
 
 ## About
+
+### Why the name "OpenCaptions"?
+"Open" because It's opensource
+"Captions" because it work on subtitles and captions
+And Open captions are the name for subtitles burned directly into a videos, since we convert closed captions from srt to Text+ to be burned in as open captions, it's a fitting name
+
+
+### Why make it?
 The starting point of OpenCaptions is based on one of my older project [Resolve_TextPlus2SRT](https://github.com/david-ca6/Resolve_TextPlus2SRT). 
 But TextPlus2SRT was more a custom script for my own use than anything else, it was missing a lot of features, it was only working with linux, required to type in a terminal, and it only allowed to convert SRT to TextPlus, nothing more. OpenCaptions is inteded to be a stronger base to work from to make a more powerful and user-friendly tool.
 
