@@ -15,27 +15,24 @@ This is an open source tool that uses the Davinci API to create text+ caption tr
 ## Setup
 1. Install [DaVinci Resolve](https://www.blackmagicdesign.com/products/davinciresolve) 19 or higher.
 2. Install [Python](https://www.python.org/downloads/) 3.10 or higher.
+3. Install OpenCaptions by placing the "OpenCaptions.py" file in the following folder:
+    
+    Windows 
+    > C:\ProgramData\Blackmagic Design\DaVinci Resolve\Fusion\Scripts\Comp\
+    
+    macOS  
+    > /Library/Application Support/Blackmagic Design/DaVinci Resolve/Fusion/Scripts/Comp/
+4. Restart Davinci Resolve.
 
-## Usage as Resolve Script (Davinci Resolve Studio and Davinci Resolve Free)
-1. Install OpenCaptions 
+## Usage
 2. Create a "Captions Templates" folder in your Media Pool. 
 3. Place your Text+ templates in it.
-4. Create write or generate your subtitle.
-5. Export your subtitle to a .srt file.
-6. Run OpenCaptions from the resolve Workspace menu. ` Workspace -> Scripts -> Comp -> OpenCaption`
+4. Write or generate your subtitles track.
+5. Export your subtitle track to a .srt file. (skip this step if you created the subtitles outside of Davinci Resolve)
+6. Run OpenCaptions from the resolve Workspace menu. `Workspace -> Scripts -> Comp -> OpenCaption`
 7. Select your SRT file and your Text+ template.
 8. Click "Execute".
 9. Enjoy!
-
-## Usage as External Script (Davinci Resolve Studio Only)
-1. Create a "Captions Templates" folder in your Media Pool. 
-2. Place your Text+ templates in it.
-2. Create write or generate your subtitle.
-3. Export your subtitle to a .srt file.
-4. Run "OpenCaptions.py" from a terminal.
-5. Select your SRT file and your Text+ template.
-6. Click "Execute".
-7. Enjoy!
 
 ## Why Use OpenCaptions?
 - Simple to use
