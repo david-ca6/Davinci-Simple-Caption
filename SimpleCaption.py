@@ -335,6 +335,7 @@ def get_available_templates():
 
 def main():
     root = tk.Tk()
+    root.attributes("-topmost", True)
     root.title("Simple Captions")
     root.geometry("600x240")
 
