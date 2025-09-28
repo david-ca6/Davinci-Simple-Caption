@@ -8,32 +8,42 @@ This is an open source tool that uses the Davinci API to create text+ caption tr
 - Simple Caption will always create a new text+ track, it will not overwrite existing text+ tracks.
 
 ## Setup
-1. Install [DaVinci Resolve Studio](https://www.blackmagicdesign.com/products/davinciresolve) 19 or higher.
+1. Install [DaVinci Resolve](https://www.blackmagicdesign.com/products/davinciresolve) 19 or higher.
 2. Install [Python](https://www.python.org/downloads/) 3.10 or higher.
-3. Create a "Captions Templates" folder in your Media Pool. And place your Text+ templates in it.
 
-## Usage
+## Usage as Resolve Script (Davinci Resolve Studio and Davinci Resolve Free)
+1. Install Simple Caption 
+2. Create a "Captions Templates" folder in your Media Pool. 
+3. Place your Text+ templates in it.
+4. Create write or generate your subtitle.
+5. Export your subtitle to a .srt file.
+6. Run Simple Caption from the resolve Workspace menu. ` Workspace -> Scripts -> Comp -> SimpleCaption`
+7. Select your SRT file and your Text+ template.
+8. Click "Execute".
+9. Enjoy!
 
-1. Create write or generate your subtitle.
-
-2. Export your subtitle to a .srt file.
-
-3. Open Simple Caption.
-```
-chmod +x ./run.sh
-./run.sh
-```
-
-4. Select your SRT file and your Text+ template.
-
-5. Click "Execute".
-
-6. Enjoy!
+## Usage as External Script (Davinci Resolve Studio Only)
+1. Create a "Captions Templates" folder in your Media Pool. 
+2. Place your Text+ templates in it.
+2. Create write or generate your subtitle.
+3. Export your subtitle to a .srt file.
+4. Run Simple Caption.py from a terminal.
+5. Select your SRT file and your Text+ template.
+6. Click "Execute".
+7. Enjoy!
 
 ## Dependencies
-
 - Python 3.10+
 - tkinter (standard library)
 
+## Why Simple Use Simple Caption?
+- Simple to use
+- Totaly free
+- Totally open source, you can audit the code, and make your own changes
+- Cross-platform, you can use it on Windows, macOS and Linux
+- Compatible with both Davinci Resolve Free and Davinci Resolve Studio (paid)
+
 ## About
-This project is based on the code from my older project [Resolve_TextPlus2SRT](https://github.com/david-ca6/Resolve_TextPlus2SRT), but simpler to use and more user-friendly, because not everyone want to run a script in the terminal. 
+Part of the code in this project is based on one of my older project [Resolve_TextPlus2SRT](https://github.com/david-ca6/Resolve_TextPlus2SRT). 
+But TextPlus2SRT was more a custom script for my own use than anything else, it was missing a lot of features, it was only working with linux, required to type in a terminal, and the feature were very basic (only convert SRT to TextPlus). Simple Caption is a stronger base to work from to make a more powerful and user-friendly tool.
+
