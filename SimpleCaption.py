@@ -1,48 +1,15 @@
 #!/usr/bin/env python3
 
-import sys, time, subprocess, os
+import sys
 import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
-from datetime import timedelta
-from typing import List, Dict, Optional, Iterable
+import platform
 
-# pip install pandas
+from python_get_resolve import GetResolve
 
-# ---------- Resolve bootstrap (same pattern as original) ----------
+# ------------------------- resolve api connection -------------------------
 
-def load_source(module_name, file_path):
-    if sys.version_info[:2] >= (3,5):
-        import importlib.util
-        spec = importlib.util.spec_from_file_location(module_name, file_path)
-        if not spec:
-            return None
-        module = importlib.util.module_from_spec(spec)
-        sys.modules[module_name] = module
-        spec.loader.exec_module(module)
-        return module
-    else:
-        import imp
-        return imp.load_source(module_name, file_path)
-
-try:
-    import DaVinciResolveScript as dvr_script
-except ImportError:
-    try:
-        expectedPath = "/Library/Application Support/Blackmagic Design/DaVinci Resolve/Developer/Scripting/Modules/"
-        load_source('DaVinciResolveScript', expectedPath + 'DaVinciResolveScript.py')
-        import DaVinciResolveScript as dvr_script
-    except Exception as ex:
-        print("[error] Cannot import DaVinciResolveScript")
-        print(ex)
-        sys.exit(1)
-
-resolve = dvr_script.scriptapp("Resolve")
-pm = resolve.GetProjectManager()
-project = pm.GetCurrentProject()
-timeline = project.GetCurrentTimeline() if project else None
-# ------------------------- resolve api connection stuff -------------------------
-
-resolve = dvr_script.scriptapp("Resolve")
+resolve = GetResolve()
 project_manager = resolve.GetProjectManager()
 project = project_manager.GetCurrentProject()
 timeline = project.GetCurrentTimeline()
@@ -55,30 +22,26 @@ def srt2df(file_path):
     with open(file_path, 'r', encoding='utf-8') as file:
         content = file.read()
 
-    # Split the content into subtitle blocks
     subtitle_blocks = content.strip().split('\n\n')
 
     for block in subtitle_blocks:
         lines = block.split('\n')
-        if len(lines) >= 3:  # Ensure we have at least index, timestamp, and text
+        if len(lines) >= 3:
 
             nid = int(lines[0])
 
             timestamp = lines[1]
-            text = '\n'.join(lines[2:])  # Join all text lines
+            text = '\n'.join(lines[2:])
 
-            # Extract start time
             start_time = timestamp.split(' --> ')[0]
             end_time = timestamp.split(' --> ')[1]
             
-            # Convert time to seconds
             h, m, s = start_time.replace(',', '.').split(':')
             startTime_seconds = float(h) * 3600 + float(m) * 60 + float(s)
 
             h, m, s = end_time.replace(',', '.').split(':')
             endTime_seconds = float(h) * 3600 + float(m) * 60 + float(s)
 
-            # Append to dataframe
             df.append({'id': nid, 'start': startTime_seconds, 'end': endTime_seconds, 'text': text})
 
     return df
@@ -104,7 +67,6 @@ def df2srt(df, file_path):
             milliseconds = end_time.microseconds // 1000
             end_time_str = f"{hours:02d}:{minutes:02d}:{seconds:02d},{milliseconds:03d}"
 
-            # Write subtitle entry
             file.write(f"{nid}\n")
             file.write(f"{start_time_str} --> {end_time_str}\n")
             file.write(f"{row['text']}\n\n")
@@ -127,7 +89,6 @@ def apply_text_transform(text, transform):
 
 # ------------------------- resolve timeline functions -------------------------
 
-# find a video track with the name marker and extract the text from the Text+ track item to a dataframe
 def timelineText2df(timeline, marker):
     df = []
     if timeline:
@@ -151,7 +112,8 @@ def timelineText2df(timeline, marker):
                                     nid += 1
     return df
 
-# find a video track with the name marker and update the text+ track item witht he text from the dataframe
+# ------------------------- srt file functions -------------------------
+
 def df2timelineText(df, timeline, marker):
     if timeline:
         track_count = timeline.GetTrackCount("video")
@@ -168,9 +130,7 @@ def df2timelineText(df, timeline, marker):
                             fusion_comp = item.GetFusionCompByIndex(1)
                             if fusion_comp:
                                 text_tool = fusion_comp.FindToolByID("TextPlus")
-                                # print("A")
                                 if text_tool:
-                                    # print("B")
                                     for row in df:
                                         if row['id'] == nid:
                                             text_tool.SetInput("StyledText", row['text'])
@@ -192,11 +152,9 @@ def df2NewtimelineText(df, timeline, template_name):
 
     print(f"Creating Text+ clips from SRT file: {df} using template: {template_name}")
     
-    # Get media pool and create template if needed
     media_pool = project.GetMediaPool()
     root_folder = media_pool.GetRootFolder()
     
-    # Find specific Text+ template by name
     text_clip = find_text_plus_template_by_name(media_pool, template_name)    
     if not text_clip:
         print(f"Text+ template '{template_name}' not found in Media Pool.")
@@ -206,20 +164,15 @@ def df2NewtimelineText(df, timeline, template_name):
     
     print(f"Found Text+ template: {text_clip.GetClipProperty('Clip Name')}")
     
-    # Add new video track for captions
     track_added = timeline.AddTrack("video")
     if not track_added:
         print("Failed to add new video track")
         return False
     
-    # Get the track count to know which track we just added
     track_count = timeline.GetTrackCount("video")
     
-    # Get timeline frame rate for time conversion
     fps = float(timeline.GetSetting('timelineFrameRate'))
     
-    # Calculate duration multiplier
-    # This ensures proper clip duration when using templates that may have different scaling
     duration_multiplier = 1.0
     try:
         test_duration = 100
@@ -243,19 +196,16 @@ def df2NewtimelineText(df, timeline, template_name):
         print(f"Warning: Could not calculate duration multiplier, using 1.0: {e}")
         duration_multiplier = 1.0
     
-    # Create Text+ clips for each subtitle
     created_clips = []
     
     for row in df:
-        if row['id'] == 0:  # Skip invalid entries
+        if row['id'] == 0:
             continue
             
-        # Convert time to frames
         start_frame = int(row['start'] * fps)
         end_frame = int(row['end'] * fps)
         duration = end_frame - start_frame
         
-        # Create clip definition
         new_clip = {
             "mediaPoolItem": text_clip,
             "startFrame": 0,
@@ -264,7 +214,6 @@ def df2NewtimelineText(df, timeline, template_name):
             "recordFrame": start_frame
         }
         
-        # Apply duration multiplier
         base_duration = new_clip["endFrame"] - new_clip["startFrame"] + 1
         new_duration = int(base_duration * duration_multiplier + 0.999)
         new_clip["endFrame"] = new_duration - 1
@@ -273,14 +222,11 @@ def df2NewtimelineText(df, timeline, template_name):
         if timeline_items and len(timeline_items) > 0:
             timeline_item = timeline_items[0]
             
-            # Set clip color to green
             timeline_item.SetClipColor("Green")
 
-            # Get fusion composition and set text (using same approach as df2timelineText)
             if timeline_item.GetFusionCompCount() > 0:
                 comp = timeline_item.GetFusionCompByIndex(1)
                 if comp:
-                    # Find Text+ tool using the same method as the working update function
                     text_tool = comp.FindToolByID("TextPlus")
                     if text_tool:
                         text_tool.SetInput("StyledText", remove_ponctuation(row['text']))
@@ -307,12 +253,11 @@ def find_text_plus_template_by_name(media_pool, template_name):
     def search_folder(folder):
         clips = folder.GetClipList()
         for clip in clips:
-            if clip.GetClipProperty("File Path") == "":  # Fusion composition
+            if clip.GetClipProperty("File Path") == "":
                 clip_name = clip.GetClipProperty("Clip Name")
                 if clip_name == template_name:
                     return clip
         
-        # Recursively search subfolders
         for subfolder in folder.GetSubFolderList():
             result = search_folder(subfolder)
             if result:
@@ -331,11 +276,10 @@ def list_available_templates(media_pool):
     def search_folder(folder, folder_path=""):
         clips = folder.GetClipList()
         for clip in clips:
-            if clip.GetClipProperty("File Path") == "":  # Fusion composition
+            if clip.GetClipProperty("File Path") == "":
                 clip_name = clip.GetClipProperty("Clip Name")
                 templates.append(f"  - {clip_name} (in {folder_path or 'Root'})")
         
-        # Recursively search subfolders
         for subfolder in folder.GetSubFolderList():
             subfolder_name = subfolder.GetName()
             new_path = f"{folder_path}/{subfolder_name}" if folder_path else subfolder_name
@@ -351,7 +295,6 @@ def list_available_templates(media_pool):
         print("  Create a Text+ composition in Fusion and save it to the Media Pool")
 
     # ------------------------------------------------------------
-
 
 def load_source(module_name, file_path):
     if sys.version_info[0] >= 3 and sys.version_info[1] >= 5:
@@ -389,7 +332,7 @@ timeline = project.GetCurrentTimeline()
 
 def get_video_tracks():
     global timeline
-    timeline = project.GetCurrentTimeline() # get timeline again in case it changed since the last call
+    timeline = project.GetCurrentTimeline()
     track_count = timeline.GetTrackCount("video")
     return [timeline.GetTrackName("video", i) for i in range(1, track_count + 1)]
 
@@ -403,11 +346,10 @@ def get_available_templates():
         def search_folder(folder):
             clips = folder.GetClipList()
             for clip in clips:
-                if clip.GetClipProperty("File Path") == "":  # Fusion composition
+                if clip.GetClipProperty("File Path") == "":
                     clip_name = clip.GetClipProperty("Clip Name")
                     templates.append(clip_name)
             
-            # Recursively search subfolders
             for subfolder in folder.GetSubFolderList():
                 print("subfolder", subfolder.GetName())
                 if subfolder.GetName() != "Captions Templates":
@@ -419,8 +361,6 @@ def get_available_templates():
     except Exception as e:
         print(f"Error getting templates: {e}")
         return []
-
-
 
 def main():
     root = tk.Tk()
