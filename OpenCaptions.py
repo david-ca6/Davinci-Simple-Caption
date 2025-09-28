@@ -336,7 +336,7 @@ def get_available_templates():
 def main():
     root = tk.Tk()
     root.attributes("-topmost", True)
-    root.title("Simple Captions")
+    root.title("OpenCaptions")
     root.geometry("600x240")
 
     srt_path_var = tk.StringVar()
