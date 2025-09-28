@@ -3,6 +3,8 @@ __pycache__/
 *.py[codz]
 *$py.class
 
+python_get_resolve.py
+
 # C extensions
 *.so
 
