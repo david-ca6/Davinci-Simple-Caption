@@ -7,6 +7,11 @@ This is an open source tool that uses the Davinci API to create text+ caption tr
 - Simple Caption always work with the focused timeline, no need to restart it when you change the timeline.
 - Simple Caption will always create a new text+ track, it will not overwrite existing text+ tracks.
 
+## Features
+- Create Text+ from a .srt file and a Text+ template.
+- Remove punctuation (optional)
+- Case conversion [none lover case, upper case, capitalize all words]
+
 ## Setup
 1. Install [DaVinci Resolve](https://www.blackmagicdesign.com/products/davinciresolve) 19 or higher.
 2. Install [Python](https://www.python.org/downloads/) 3.10 or higher.
@@ -32,10 +37,6 @@ This is an open source tool that uses the Davinci API to create text+ caption tr
 6. Click "Execute".
 7. Enjoy!
 
-## Dependencies
-- Python 3.10+
-- tkinter (standard library)
-
 ## Why Simple Use Simple Caption?
 - Simple to use
 - Totaly free
@@ -43,7 +44,11 @@ This is an open source tool that uses the Davinci API to create text+ caption tr
 - Cross-platform, you can use it on Windows, macOS and Linux
 - Compatible with both Davinci Resolve Free and Davinci Resolve Studio (paid)
 
+## Dependencies
+- Python 3.10+
+- tkinter (standard library)
+
 ## About
-Part of the code in this project is based on one of my older project [Resolve_TextPlus2SRT](https://github.com/david-ca6/Resolve_TextPlus2SRT). 
-But TextPlus2SRT was more a custom script for my own use than anything else, it was missing a lot of features, it was only working with linux, required to type in a terminal, and the feature were very basic (only convert SRT to TextPlus). Simple Caption is a stronger base to work from to make a more powerful and user-friendly tool.
+The starting point of Simple Caption is based on one of my older project [Resolve_TextPlus2SRT](https://github.com/david-ca6/Resolve_TextPlus2SRT). 
+But TextPlus2SRT was more a custom script for my own use than anything else, it was missing a lot of features, it was only working with linux, required to type in a terminal, and it only allowed to convert SRT to TextPlus, nothing more. Simple Caption is inteded to be a stronger base to work from to make a more powerful and user-friendly tool.
 

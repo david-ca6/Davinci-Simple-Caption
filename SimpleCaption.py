@@ -81,12 +81,12 @@ def remove_ponctuation(text):
     return text
 
 def apply_text_transform(text, transform):
-    if transform == "to lowercase":
+    if transform == "Lowercase":
         return text.lower()
-    elif transform == "TO UPPERCASE":
+    elif transform == "Uppercase":
         return text.upper()
     elif transform == "Capitalize All Words":
-        return text.capitalize()
+        return text.title()
     else:
         return text
 
@@ -140,7 +140,7 @@ def df2timelineText(df, timeline, marker):
                                             nid += 1
                                             break
 
-def df2NewtimelineText(df, timeline, template_name):
+def df2NewtimelineText(df, timeline, template_name, remove_punctuation=True, text_transform="None"):
     """
     Create new Text+ clips from SRT dataframe on timeline
     
@@ -148,6 +148,7 @@ def df2NewtimelineText(df, timeline, template_name):
         df: list of dicts with subtitle data
         timeline: DaVinci Resolve timeline object
         template_name: Name of the Text+ template to use
+        remove_punctuation: Whether to remove punctuation from text
     """
     if not timeline or not df:
         print("No timeline or empty dataframe")
@@ -232,7 +233,9 @@ def df2NewtimelineText(df, timeline, template_name):
                 if comp:
                     text_tool = comp.FindToolByID("TextPlus")
                     if text_tool:
-                        text_tool.SetInput("StyledText", remove_ponctuation(row['text']))
+                        text_content = remove_ponctuation(row['text']) if remove_punctuation else row['text']
+                        text_content = apply_text_transform(text_content, text_transform)
+                        text_tool.SetInput("StyledText", text_content)
                         created_clips.append(timeline_item)
                         print(f"Created subtitle {row['id']}: {row['text'][:50]}{'...' if len(row['text']) > 50 else ''}")
                     else:
@@ -333,10 +336,13 @@ def get_available_templates():
 def main():
     root = tk.Tk()
     root.title("Simple Captions")
-    root.geometry("600x220")
+    root.geometry("600x240")
 
     srt_path_var = tk.StringVar()
     status_var = tk.StringVar()
+    remove_punctuation_var = tk.BooleanVar(value=True)
+    text_transform_options = ["None", "Lowercase", "Uppercase", "Capitalize All Words"]
+    text_transform_var = tk.StringVar(value=text_transform_options[0])
 
     templates = get_available_templates()
     template_var = tk.StringVar(value=templates[0] if templates else "")
@@ -365,7 +371,13 @@ def main():
             status_var.set("Please provide SRT file path, and template name.")
             return
         df = srt2df(file_path)
-        success = df2NewtimelineText(df, timeline, template)
+        success = df2NewtimelineText(
+            df,
+            timeline,
+            template,
+            remove_punctuation=remove_punctuation_var.get(),
+            text_transform=text_transform_var.get(),
+        )
         if success:
             status_var.set(f"Successfully created Text+ with template '{template}'")
         else:
@@ -386,9 +398,13 @@ def main():
     entry.grid(row=1, column=1, sticky="ew", padx=(8, 8), pady=(12, 0))
     ttk.Button(content, text="Select SRT File", command=select_srt_file).grid(row=1, column=2, sticky="w", pady=(12, 0))
 
-    ttk.Button(content, text="Execute", command=execute_callback).grid(row=2, column=0, columnspan=3, sticky="ew", pady=(16, 0))
+    ttk.Label(content, text="Case conversion").grid(row=2, column=0, sticky="w", pady=(16, 0))
+    transform_combo = ttk.Combobox(content, textvariable=text_transform_var, values=text_transform_options, state="readonly")
+    transform_combo.grid(row=2, column=1, sticky="ew", padx=(8, 8), pady=(16, 0))
+    ttk.Checkbutton(content, text="Remove punctuation", variable=remove_punctuation_var, onvalue=True, offvalue=False).grid(row=3, column=0, columnspan=3, sticky="w", pady=(12, 0))
+    ttk.Button(content, text="Execute", command=execute_callback).grid(row=4, column=0, columnspan=3, sticky="ew", pady=(16, 0))
     status_lbl = ttk.Label(content, textvariable=status_var)
-    status_lbl.grid(row=3, column=0, columnspan=3, sticky="w", pady=(12, 0))
+    status_lbl.grid(row=5, column=0, columnspan=3, sticky="w", pady=(12, 0))
 
     content.columnconfigure(1, weight=1)
 
