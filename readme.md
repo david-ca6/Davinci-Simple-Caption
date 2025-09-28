@@ -10,9 +10,12 @@ This is an open source tool that uses the DaVinci API to create a Text+ caption 
 - OpenCaptions will always create a new Text+ track, it will not overwrite existing Text+ tracks.
 
 ## Features
-- Create Text+ from a .srt file and a Text+ template.
+- Create Text+ from a .srt file and a Text+ template
+- Queue up to five SRT files with different templates; each generates its own Text+ track
+- Remove queued tracks before executing if you change your mind
 - Remove punctuation (optional)
 - Case conversion [none, lower case, upper case, capitalize all words]
+- Multi-track support (up to five tracks) to easilly sub video with multiple speakers
 
 ## Setup
 1. Install [DaVinci Resolve](https://www.blackmagicdesign.com/products/davinciresolve) 19 or higher.
@@ -33,8 +36,8 @@ This is an open source tool that uses the DaVinci API to create a Text+ caption 
 3. Write or generate your subtitles track.
 4. Export your subtitle track to a .srt file. (skip this step if you created the subtitles outside of DaVinci Resolve)
 5. Run OpenCaptions from the Resolve Workspace menu. `Workspace -> Scripts -> Comp -> OpenCaptions`
-6. Select your SRT file and your Text+ template.
-7. Click "Execute".
+6. Select up to five SRT/template pairs.
+7. Click "Execute"; tracks are generated in order.
 
 ## Why Use OpenCaptions?
 - Simple to use

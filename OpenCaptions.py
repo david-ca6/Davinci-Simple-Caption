@@ -335,79 +335,159 @@ def get_available_templates():
 
 def main():
     root = tk.Tk()
-    root.attributes("-topmost", True)
+    root.focus_force()
     root.title("OpenCaptions")
-    root.geometry("600x240")
+    root.geometry("720x420")
 
-    srt_path_var = tk.StringVar()
     status_var = tk.StringVar()
     remove_punctuation_var = tk.BooleanVar(value=True)
     text_transform_options = ["None", "Lowercase", "Uppercase", "Capitalize All Words"]
     text_transform_var = tk.StringVar(value=text_transform_options[0])
 
-    templates = get_available_templates()
-    template_var = tk.StringVar(value=templates[0] if templates else "")
+    style = ttk.Style(root)
+    style.configure("Delete.TButton", foreground="red")
 
-    def select_srt_file():
+    templates = get_available_templates()
+    track_entries = []
+    add_button = None
+
+    def select_srt_file(entry):
+        if entry not in track_entries:
+            return
         path = filedialog.askopenfilename(title="Select SRT File", filetypes=[("SRT files", "*.srt"), ("All files", "*.*")])
         if path:
-            srt_path_var.set(path)
+            entry["srt_var"].set(path)
+
+    def remove_track_entry(entry):
+        nonlocal add_button
+        if entry not in track_entries:
+            return
+        for widget in (entry["label"], entry["template_combo"], entry["srt_entry"], entry["select_button"], entry["delete_button"]):
+            widget.destroy()
+        track_entries.remove(entry)
+        for index, entry_item in enumerate(track_entries):
+            entry_item["label"].configure(text=f"Track {index + 1}")
+            entry_item["label"].grid_configure(row=index + 1)
+            entry_item["template_combo"].grid_configure(row=index + 1)
+            entry_item["srt_entry"].grid_configure(row=index + 1)
+            entry_item["select_button"].grid_configure(row=index + 1)
+            entry_item["delete_button"].grid_configure(row=index + 1)
+        if add_button is not None:
+            add_button.state(["!disabled"])
+        status_var.set("Removed track.")
+
+    def add_track_entry():
+        nonlocal add_button
+        if len(track_entries) >= 5:
+            status_var.set("Maximum of 5 tracks.")
+            if add_button is not None:
+                add_button.state(["disabled"])
+            return
+        index = len(track_entries)
+        template_var = tk.StringVar(value=templates[0] if templates else "")
+        srt_var = tk.StringVar()
+        entry = {
+            "template_var": template_var,
+            "srt_var": srt_var,
+        }
+        label = ttk.Label(tracks_frame, text=f"Track {index + 1}")
+        label.grid(row=index + 1, column=0, sticky="w", pady=(4, 0))
+        entry["label"] = label
+        template_combo = ttk.Combobox(tracks_frame, textvariable=template_var, values=templates, state="readonly")
+        template_combo.grid(row=index + 1, column=1, sticky="ew", pady=(4, 0))
+        entry["template_combo"] = template_combo
+        srt_entry = ttk.Entry(tracks_frame, textvariable=srt_var)
+        srt_entry.grid(row=index + 1, column=2, sticky="ew", pady=(4, 0))
+        entry["srt_entry"] = srt_entry
+        select_button = ttk.Button(tracks_frame, text="Select", command=lambda e=entry: select_srt_file(e))
+        select_button.grid(row=index + 1, column=3, sticky="w", pady=(4, 0))
+        entry["select_button"] = select_button
+        delete_button = ttk.Button(tracks_frame, text="X", width=1, style="Delete.TButton", command=lambda e=entry: remove_track_entry(e))
+        delete_button.grid(row=index + 1, column=4, sticky="w", pady=(4, 0))
+        entry["delete_button"] = delete_button
+        track_entries.append(entry)
+        if len(track_entries) == 5 and add_button is not None:
+            add_button.state(["disabled"])
 
     def refresh_templates():
-        items = get_available_templates()
-        combo["values"] = items
-        if items:
-            status_var.set(f"Found {len(items)} templates")
-            template_var.set(items[0])
+        nonlocal templates
+        templates = get_available_templates()
+        if templates:
+            status_var.set(f"Found {len(templates)} templates")
         else:
             status_var.set("No Text+ templates found in Media Pool")
-            template_var.set("")
+        for entry in track_entries:
+            entry["template_combo"]["values"] = templates
+            if templates:
+                if entry["template_var"].get() not in templates:
+                    entry["template_var"].set(templates[0])
+            else:
+                entry["template_var"].set("")
 
     def execute_callback():
-        file_path = srt_path_var.get()
+        if not track_entries:
+            status_var.set("Add at least one track.")
+            return
+        for index, entry in enumerate(track_entries, start=1):
+            if not entry["srt_var"].get() or not entry["template_var"].get():
+                status_var.set(f"Track {index} is missing an SRT file or template.")
+                return
         global timeline
         timeline = project.GetCurrentTimeline()
-        template = template_var.get()
-        if not file_path or not template:
-            status_var.set("Please provide SRT file path, and template name.")
-            return
-        df = srt2df(file_path)
-        success = df2NewtimelineText(
-            df,
-            timeline,
-            template,
-            remove_punctuation=remove_punctuation_var.get(),
-            text_transform=text_transform_var.get(),
-        )
-        if success:
-            status_var.set(f"Successfully created Text+ with template '{template}'")
-        else:
-            status_var.set("Failed to create Text+")
+        for index, entry in enumerate(track_entries, start=1):
+            df = srt2df(entry["srt_var"].get())
+            success = df2NewtimelineText(
+                df,
+                timeline,
+                entry["template_var"].get(),
+                remove_punctuation=remove_punctuation_var.get(),
+                text_transform=text_transform_var.get(),
+            )
+            if not success:
+                status_var.set(f"Failed to create track {index}.")
+                return
+        status_var.set(f"Created {len(track_entries)} Text+ tracks.")
 
     content = ttk.Frame(root, padding=16)
     content.grid(row=0, column=0, sticky="nsew")
     root.columnconfigure(0, weight=1)
     root.rowconfigure(0, weight=1)
 
-    ttk.Label(content, text="Text+ Template").grid(row=0, column=0, sticky="w")
-    combo = ttk.Combobox(content, textvariable=template_var, values=templates, state="readonly")
-    combo.grid(row=0, column=1, sticky="ew", padx=(8, 8))
-    ttk.Button(content, text="Refresh", command=refresh_templates).grid(row=0, column=2, sticky="w")
-
-    ttk.Label(content, text="SRT File").grid(row=1, column=0, sticky="w", pady=(12, 0))
-    entry = ttk.Entry(content, textvariable=srt_path_var)
-    entry.grid(row=1, column=1, sticky="ew", padx=(8, 8), pady=(12, 0))
-    ttk.Button(content, text="Select SRT File", command=select_srt_file).grid(row=1, column=2, sticky="w", pady=(12, 0))
-
-    ttk.Label(content, text="Case conversion").grid(row=2, column=0, sticky="w", pady=(16, 0))
-    transform_combo = ttk.Combobox(content, textvariable=text_transform_var, values=text_transform_options, state="readonly")
-    transform_combo.grid(row=2, column=1, sticky="ew", padx=(8, 8), pady=(16, 0))
-    ttk.Checkbutton(content, text="Remove punctuation", variable=remove_punctuation_var, onvalue=True, offvalue=False).grid(row=3, column=0, columnspan=3, sticky="w", pady=(12, 0))
-    ttk.Button(content, text="Execute", command=execute_callback).grid(row=4, column=0, columnspan=3, sticky="ew", pady=(16, 0))
-    status_lbl = ttk.Label(content, textvariable=status_var)
-    status_lbl.grid(row=5, column=0, columnspan=3, sticky="w", pady=(12, 0))
-
+    content.columnconfigure(0, weight=1)
     content.columnconfigure(1, weight=1)
+    content.columnconfigure(2, weight=1)
+    content.rowconfigure(1, weight=1)
+
+    ttk.Label(content, text="Tracks").grid(row=0, column=0, columnspan=3, sticky="w")
+
+    tracks_frame = ttk.Frame(content)
+    tracks_frame.grid(row=1, column=0, columnspan=3, sticky="nsew")
+    tracks_frame.columnconfigure(1, weight=1)
+    tracks_frame.columnconfigure(2, weight=1)
+
+    ttk.Label(tracks_frame, text="Track").grid(row=0, column=0, sticky="w")
+    ttk.Label(tracks_frame, text="Template").grid(row=0, column=1, sticky="w")
+    ttk.Label(tracks_frame, text="SRT File").grid(row=0, column=2, sticky="w")
+    ttk.Label(tracks_frame, text="Load File").grid(row=0, column=3, sticky="w")
+    ttk.Label(tracks_frame, text="Remove").grid(row=0, column=4, sticky="w")
+
+    controls_frame = ttk.Frame(content)
+    controls_frame.grid(row=2, column=0, columnspan=3, sticky="ew", pady=(8, 0))
+    add_button = ttk.Button(controls_frame, text="Add Track", command=add_track_entry)
+    add_button.grid(row=0, column=0, sticky="w")
+    ttk.Button(controls_frame, text="Refresh Templates", command=refresh_templates).grid(row=0, column=1, sticky="w")
+    controls_frame.columnconfigure(2, weight=1)
+
+    add_track_entry()
+    refresh_templates()
+
+    ttk.Label(content, text="Case conversion").grid(row=3, column=0, sticky="w", pady=(16, 0))
+    transform_combo = ttk.Combobox(content, textvariable=text_transform_var, values=text_transform_options, state="readonly")
+    transform_combo.grid(row=3, column=1, sticky="ew", pady=(16, 0))
+    ttk.Checkbutton(content, text="Remove punctuation", variable=remove_punctuation_var, onvalue=True, offvalue=False).grid(row=4, column=0, columnspan=3, sticky="w", pady=(12, 0))
+    ttk.Button(content, text="Execute", command=execute_callback).grid(row=5, column=0, columnspan=3, sticky="ew", pady=(16, 0))
+    status_lbl = ttk.Label(content, textvariable=status_var)
+    status_lbl.grid(row=6, column=0, columnspan=3, sticky="w", pady=(12, 0))
 
     root.mainloop()
 
