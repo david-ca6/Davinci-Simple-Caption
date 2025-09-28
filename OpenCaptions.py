@@ -392,7 +392,7 @@ def main():
     ttk.Label(content, text="Text+ Template").grid(row=0, column=0, sticky="w")
     combo = ttk.Combobox(content, textvariable=template_var, values=templates, state="readonly")
     combo.grid(row=0, column=1, sticky="ew", padx=(8, 8))
-    ttk.Button(content, text="Update", command=refresh_templates).grid(row=0, column=2, sticky="w")
+    ttk.Button(content, text="Refresh", command=refresh_templates).grid(row=0, column=2, sticky="w")
 
     ttk.Label(content, text="SRT File").grid(row=1, column=0, sticky="w", pady=(12, 0))
     entry = ttk.Entry(content, textvariable=srt_path_var)

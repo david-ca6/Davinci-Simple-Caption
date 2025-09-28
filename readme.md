@@ -1,6 +1,8 @@
 # Resolve OpenCaptions
 A Free and Open Source Caption Tool for Davinci Resolve.
 
+![OpenCaptions](docs/images/ui.png)
+
 ## Description
 This is an open source tool that uses the Davinci API to create text+ caption track on a Davinci Timeline using a .srt files and a Text+ template.
 
