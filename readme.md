@@ -11,11 +11,9 @@ This is an open source tool that uses the DaVinci API to create a Text+ caption 
 
 ## Features
 - Create Text+ from a .srt file and a Text+ template
-- Queue up to five SRT files with different templates; each generates its own Text+ track
-- Remove queued tracks before executing if you change your mind
+- Multi-track support with up to six SRT files with different templates, each generating its own Text+ track
 - Remove punctuation (optional)
 - Case conversion [none, lower case, upper case, capitalize all words]
-- Multi-track support (up to five tracks) to easilly sub video with multiple speakers
 
 ## Setup
 1. Install [DaVinci Resolve](https://www.blackmagicdesign.com/products/davinciresolve) 19 or higher.

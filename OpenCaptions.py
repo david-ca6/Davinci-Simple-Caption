@@ -140,7 +140,7 @@ def df2timelineText(df, timeline, marker):
                                             nid += 1
                                             break
 
-def df2NewtimelineText(df, timeline, template_name, remove_punctuation=True, text_transform="None"):
+def df2NewtimelineText(df, timeline, template_name, remove_punctuation=True, text_transform="Keep Case"):
     """
     Create new Text+ clips from SRT dataframe on timeline
     
@@ -337,11 +337,12 @@ def main():
     root = tk.Tk()
     root.focus_force()
     root.title("OpenCaptions")
-    root.geometry("720x420")
+    root.geometry("720x540")
+    root.minsize(720, 540)
 
     status_var = tk.StringVar()
     remove_punctuation_var = tk.BooleanVar(value=True)
-    text_transform_options = ["None", "Lowercase", "Uppercase", "Capitalize All Words"]
+    text_transform_options = ["Keep Case", "Lowercase", "Uppercase", "Capitalize All Words"]
     text_transform_var = tk.StringVar(value=text_transform_options[0])
 
     style = ttk.Style(root)
@@ -378,8 +379,8 @@ def main():
 
     def add_track_entry():
         nonlocal add_button
-        if len(track_entries) >= 5:
-            status_var.set("Maximum of 5 tracks.")
+        if len(track_entries) >= 6:
+            status_var.set("Maximum of 6 tracks.")
             if add_button is not None:
                 add_button.state(["disabled"])
             return
@@ -406,7 +407,7 @@ def main():
         delete_button.grid(row=index + 1, column=4, sticky="w", pady=(4, 0))
         entry["delete_button"] = delete_button
         track_entries.append(entry)
-        if len(track_entries) == 5 and add_button is not None:
+        if len(track_entries) == 6 and add_button is not None:
             add_button.state(["disabled"])
 
     def refresh_templates():
@@ -448,46 +449,60 @@ def main():
                 return
         status_var.set(f"Created {len(track_entries)} Text+ tracks.")
 
-    content = ttk.Frame(root, padding=16)
+    content = ttk.Frame(root, padding=24)
     content.grid(row=0, column=0, sticky="nsew")
     root.columnconfigure(0, weight=1)
     root.rowconfigure(0, weight=1)
 
     content.columnconfigure(0, weight=1)
-    content.columnconfigure(1, weight=1)
-    content.columnconfigure(2, weight=1)
-    content.rowconfigure(1, weight=1)
+    content.rowconfigure(0, weight=1)
 
-    ttk.Label(content, text="Tracks").grid(row=0, column=0, columnspan=3, sticky="w")
+    tracks_section = ttk.LabelFrame(content, text="Tracks", padding=(16, 12))
+    tracks_section.grid(row=0, column=0, sticky="nsew", pady=(0, 12))
+    tracks_section.columnconfigure(1, weight=1)
+    tracks_section.columnconfigure(2, weight=1)
+    tracks_section.rowconfigure(0, weight=1)
 
-    tracks_frame = ttk.Frame(content)
-    tracks_frame.grid(row=1, column=0, columnspan=3, sticky="nsew")
+    tracks_frame = ttk.Frame(tracks_section)
+    tracks_frame.grid(row=0, column=0, columnspan=5, sticky="nsew")
     tracks_frame.columnconfigure(1, weight=1)
     tracks_frame.columnconfigure(2, weight=1)
 
-    ttk.Label(tracks_frame, text="Track").grid(row=0, column=0, sticky="w")
-    ttk.Label(tracks_frame, text="Template").grid(row=0, column=1, sticky="w")
-    ttk.Label(tracks_frame, text="SRT File").grid(row=0, column=2, sticky="w")
-    ttk.Label(tracks_frame, text="Load File").grid(row=0, column=3, sticky="w")
+    ttk.Label(tracks_frame, text="Track").grid(row=0, column=0, sticky="w", padx=(0, 8))
+    ttk.Label(tracks_frame, text="Template").grid(row=0, column=1, sticky="w", padx=(0, 8))
+    ttk.Label(tracks_frame, text="SRT File").grid(row=0, column=2, sticky="w", padx=(0, 8))
+    ttk.Label(tracks_frame, text="Load File").grid(row=0, column=3, sticky="w", padx=(0, 8))
     ttk.Label(tracks_frame, text="Remove").grid(row=0, column=4, sticky="w")
 
-    controls_frame = ttk.Frame(content)
-    controls_frame.grid(row=2, column=0, columnspan=3, sticky="ew", pady=(8, 0))
+    controls_frame = ttk.Frame(tracks_section)
+    controls_frame.grid(row=1, column=0, columnspan=5, sticky="ew", pady=(12, 0))
+    controls_frame.columnconfigure(2, weight=1)
+
     add_button = ttk.Button(controls_frame, text="Add Track", command=add_track_entry)
     add_button.grid(row=0, column=0, sticky="w")
-    ttk.Button(controls_frame, text="Refresh Templates", command=refresh_templates).grid(row=0, column=1, sticky="w")
-    controls_frame.columnconfigure(2, weight=1)
+    ttk.Button(controls_frame, text="Refresh Templates", command=refresh_templates).grid(row=0, column=1, sticky="w", padx=(12, 0))
+
+    options_section = ttk.LabelFrame(content, text="Options", padding=(16, 12))
+    options_section.grid(row=1, column=0, sticky="ew")
+    options_section.columnconfigure(1, weight=1)
+
+    ttk.Label(options_section, text="Case").grid(row=0, column=0, sticky="w")
+    ttk.Combobox(options_section, textvariable=text_transform_var, values=text_transform_options, state="readonly").grid(row=0, column=1, sticky="ew")
+    ttk.Label(options_section, text="Remove punctuation").grid(row=1, column=0, sticky="w", pady=(12, 0))
+    ttk.Checkbutton(options_section, variable=remove_punctuation_var, onvalue=True, offvalue=False).grid(row=1, column=1, sticky="w", pady=(12, 0))
+
+    actions_frame = ttk.Frame(content)
+    actions_frame.grid(row=2, column=0, sticky="ew", pady=(16, 0))
+    ttk.Button(actions_frame, text="Execute", command=execute_callback).grid(row=0, column=0, sticky="ew")
+    actions_frame.columnconfigure(0, weight=1)
+
+    status_frame = ttk.Frame(content)
+    status_frame.grid(row=3, column=0, sticky="ew", pady=(12, 0))
+    status_lbl = ttk.Label(status_frame, textvariable=status_var)
+    status_lbl.grid(row=0, column=0, sticky="w")
 
     add_track_entry()
     refresh_templates()
-
-    ttk.Label(content, text="Case conversion").grid(row=3, column=0, sticky="w", pady=(16, 0))
-    transform_combo = ttk.Combobox(content, textvariable=text_transform_var, values=text_transform_options, state="readonly")
-    transform_combo.grid(row=3, column=1, sticky="ew", pady=(16, 0))
-    ttk.Checkbutton(content, text="Remove punctuation", variable=remove_punctuation_var, onvalue=True, offvalue=False).grid(row=4, column=0, columnspan=3, sticky="w", pady=(12, 0))
-    ttk.Button(content, text="Execute", command=execute_callback).grid(row=5, column=0, columnspan=3, sticky="ew", pady=(16, 0))
-    status_lbl = ttk.Label(content, textvariable=status_var)
-    status_lbl.grid(row=6, column=0, columnspan=3, sticky="w", pady=(12, 0))
 
     root.mainloop()
 
